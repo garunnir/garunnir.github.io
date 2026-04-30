@@ -1,0 +1,242 @@
+
+<style>
+  .container { padding: 1rem 0; font-family: var(--font-sans); }
+  .tabs { display: flex; gap: 8px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .tab { padding: 6px 16px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: transparent; cursor: pointer; font-size: 14px; color: var(--color-text-secondary); }
+  .tab.active { background: var(--color-background-secondary); color: var(--color-text-primary); font-weight: 500; border-color: var(--color-border-primary); }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  canvas { width: 100%; border-radius: var(--border-radius-md); }
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; font-size: 13px; color: var(--color-text-secondary); }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 24px; height: 3px; border-radius: 2px; }
+  .callout { background: var(--color-background-secondary); border-left: 3px solid #3266ad; border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0; padding: 12px 16px; margin: 1rem 0; font-size: 14px; line-height: 1.6; color: var(--color-text-primary); }
+  .highlight { color: #D85A30; font-weight: 500; }
+  .highlight2 { color: #1D9E75; font-weight: 500; }
+</style>
+
+<div class="container">
+  <h2 class="sr-only">역삼각함수와 주욧값(principal value) 시각적 설명</h2>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showPanel('panel1', this)">1단계: 문제점 — sin은 다대일</button>
+    <button class="tab" onclick="showPanel('panel2', this)">2단계: 해결 — 정의역 제한</button>
+    <button class="tab" onclick="showPanel('panel3', this)">3단계: arcsin 완성</button>
+  </div>
+
+  <div id="panel1" class="panel active">
+    <div class="callout">
+      a = 0.7일 때, <span class="highlight">sin θ = 0.7</span>을 만족하는 θ가 무한히 많습니다.<br>
+      → 하나의 입력(a)에 출력(θ)이 여러 개 → <strong>함수가 아님</strong>
+    </div>
+    <canvas id="c1" height="320"></canvas>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#3266ad;"></div> sin θ 그래프</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#D85A30; height:1px; border-top: 2px dashed #D85A30;"></div> a = 0.7 수평선</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#D85A30; width:10px; height:10px; border-radius:50%;"></div> 무한히 많은 해 θ</div>
+    </div>
+  </div>
+
+  <div id="panel2" class="panel">
+    <div class="callout">
+      θ의 범위를 <span class="highlight2">[-π/2, π/2]</span>로 제한하면, 각 a에 대해 θ가 정확히 하나만 존재합니다.<br>
+      이 구간이 바로 <strong>주욧값(principal value)</strong> 구간입니다.
+    </div>
+    <canvas id="c2" height="320"></canvas>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#ccc;"></div> 제한 전 (회색 = 사용 안 함)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#1D9E75;"></div> 주욧값 구간 [-π/2, π/2]</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#D85A30; height:1px; border-top: 2px dashed #D85A30;"></div> a = 0.7 수평선</div>
+    </div>
+  </div>
+
+  <div id="panel3" class="panel">
+    <div class="callout">
+      <strong>arcsin(a)</strong>: a를 입력하면 주욧값 구간의 θ 하나를 출력하는 함수.<br>
+      정의역: <span class="highlight">[-1, 1]</span>, 치역: <span class="highlight2">[-π/2, π/2]</span>
+    </div>
+    <canvas id="c3" height="320"></canvas>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#7F77DD;"></div> arcsin(a) — 일대일 대응</div>
+    </div>
+    <p style="font-size:13px; color:var(--color-text-secondary); margin-top:12px;">
+      예: arcsin(0.7) ≈ 0.775 rad (≈ 44.4°) — 딱 하나의 값만 돌려줍니다.
+    </p>
+  </div>
+</div>
+
+<script>
+function showPanel(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'panel1') drawPanel1();
+  if (id === 'panel2') drawPanel2();
+  if (id === 'panel3') drawPanel3();
+}
+
+const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+const textColor = isDark ? '#ccc' : '#555';
+const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
+const bgColor = isDark ? '#1a1a1a' : '#fafafa';
+
+function setupCanvas(id) {
+  const canvas = document.getElementById(id);
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const W = canvas.parentElement.clientWidth || 640;
+  const H = parseInt(canvas.getAttribute('height'));
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { ctx, W, H };
+}
+
+function drawAxes(ctx, W, H, ox, oy, xScale, yScale, xLabels, yLabels) {
+  ctx.strokeStyle = gridColor;
+  ctx.lineWidth = 0.5;
+  yLabels.forEach(([val, label]) => {
+    const y = oy - val * yScale;
+    ctx.beginPath(); ctx.moveTo(40, y); ctx.lineTo(W - 20, y); ctx.stroke();
+    ctx.fillStyle = textColor; ctx.font = '11px sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(label, 38, y + 4);
+  });
+  xLabels.forEach(([val, label]) => {
+    const x = ox + val * xScale;
+    ctx.beginPath(); ctx.moveTo(x, 20); ctx.lineTo(x, H - 20); ctx.stroke();
+    ctx.fillStyle = textColor; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(label, x, H - 6);
+  });
+  ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.25)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(40, oy); ctx.lineTo(W - 20, oy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox, 20); ctx.lineTo(ox, H - 20); ctx.stroke();
+}
+
+function drawPanel1() {
+  const {ctx, W, H} = setupCanvas('c1');
+  ctx.fillStyle = bgColor; ctx.fillRect(0, 0, W, H);
+  const ox = 60, oy = H / 2, xScale = (W - 100) / (4 * Math.PI), yScale = (H - 60) / 2.4;
+  const xMin = -2 * Math.PI, xMax = 2 * Math.PI;
+  drawAxes(ctx, W, H, ox, oy, xScale, yScale,
+    [[-2*Math.PI,'-2π'],[-Math.PI,'-π'],[0,'0'],[Math.PI,'π'],[2*Math.PI,'2π']],
+    [[-1,'-1'],[1,'1']]);
+
+  ctx.beginPath(); ctx.strokeStyle = '#3266ad'; ctx.lineWidth = 2.5;
+  for (let i = 0; i <= 400; i++) {
+    const t = xMin + (xMax - xMin) * i / 400;
+    const x = ox + t * xScale, y = oy - Math.sin(t) * yScale;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  const a = 0.7;
+  ctx.beginPath(); ctx.strokeStyle = '#D85A30'; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]);
+  ctx.moveTo(40, oy - a * yScale); ctx.lineTo(W - 20, oy - a * yScale); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#D85A30'; ctx.font = '12px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('a = 0.7', W - 60, oy - a * yScale - 6);
+
+  for (let k = -2; k <= 2; k++) {
+    const sols = [Math.asin(a) + 2 * Math.PI * k, Math.PI - Math.asin(a) + 2 * Math.PI * k];
+    sols.forEach(t => {
+      if (t >= xMin - 0.1 && t <= xMax + 0.1) {
+        const x = ox + t * xScale, y = oy - a * yScale;
+        ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = '#D85A30'; ctx.fill();
+      }
+    });
+  }
+  ctx.fillStyle = textColor; ctx.font = '12px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('θ가 무한히 많다!', W / 2, 22);
+}
+
+function drawPanel2() {
+  const {ctx, W, H} = setupCanvas('c2');
+  ctx.fillStyle = bgColor; ctx.fillRect(0, 0, W, H);
+  const ox = 60, oy = H / 2, xScale = (W - 100) / (4 * Math.PI), yScale = (H - 60) / 2.4;
+  const xMin = -2 * Math.PI, xMax = 2 * Math.PI;
+  drawAxes(ctx, W, H, ox, oy, xScale, yScale,
+    [[-2*Math.PI,'-2π'],[-Math.PI,'-π'],[-Math.PI/2,'-π/2'],[0,'0'],[Math.PI/2,'π/2'],[Math.PI,'π'],[2*Math.PI,'2π']],
+    [[-1,'-1'],[1,'1']]);
+
+  ctx.beginPath(); ctx.strokeStyle = isDark ? 'rgba(180,180,180,0.2)' : 'rgba(0,0,0,0.12)'; ctx.lineWidth = 2;
+  for (let i = 0; i <= 400; i++) {
+    const t = xMin + (xMax - xMin) * i / 400;
+    const x = ox + t * xScale, y = oy - Math.sin(t) * yScale;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  const pvX1 = ox + (-Math.PI / 2) * xScale, pvX2 = ox + (Math.PI / 2) * xScale;
+  ctx.fillStyle = isDark ? 'rgba(29,158,117,0.15)' : 'rgba(29,158,117,0.1)';
+  ctx.fillRect(pvX1, 20, pvX2 - pvX1, H - 40);
+  ctx.strokeStyle = '#1D9E75'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+  ctx.beginPath(); ctx.moveTo(pvX1, 20); ctx.lineTo(pvX1, H - 20); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pvX2, 20); ctx.lineTo(pvX2, H - 20); ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.beginPath(); ctx.strokeStyle = '#1D9E75'; ctx.lineWidth = 3;
+  let first = true;
+  for (let i = 0; i <= 200; i++) {
+    const t = -Math.PI / 2 + Math.PI * i / 200;
+    const x = ox + t * xScale, y = oy - Math.sin(t) * yScale;
+    first ? ctx.moveTo(x, y) : ctx.lineTo(x, y); first = false;
+  }
+  ctx.stroke();
+
+  const a = 0.7;
+  ctx.beginPath(); ctx.strokeStyle = '#D85A30'; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]);
+  ctx.moveTo(40, oy - a * yScale); ctx.lineTo(W - 20, oy - a * yScale); ctx.stroke();
+  ctx.setLineDash([]);
+
+  const sol = Math.asin(a);
+  const sx = ox + sol * xScale, sy = oy - a * yScale;
+  ctx.beginPath(); ctx.arc(sx, sy, 7, 0, Math.PI * 2);
+  ctx.fillStyle = '#1D9E75'; ctx.fill();
+  ctx.fillStyle = '#1D9E75'; ctx.font = '12px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('θ = arcsin(0.7) ≈ 0.775', sx + 10, sy - 6);
+
+  ctx.fillStyle = isDark ? 'rgba(29,158,117,0.9)' : '#0F6E56';
+  ctx.font = '500 13px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('주욧값 구간', (pvX1 + pvX2) / 2, 35);
+}
+
+function drawPanel3() {
+  const {ctx, W, H} = setupCanvas('c3');
+  ctx.fillStyle = bgColor; ctx.fillRect(0, 0, W, H);
+  const ox = W / 2, oy = H / 2, xScale = (W - 80) / 2.2, yScale = (H - 60) / (Math.PI + 0.4);
+  drawAxes(ctx, W, H, ox, oy, xScale, yScale,
+    [[-1,'-1'],[0,'0'],[1,'1']],
+    [[-Math.PI/2,'-π/2'],[0,'0'],[Math.PI/2,'π/2']]);
+
+  ctx.beginPath(); ctx.strokeStyle = '#7F77DD'; ctx.lineWidth = 3;
+  let first = true;
+  for (let i = 0; i <= 300; i++) {
+    const a = -1 + 2 * i / 300;
+    const x = ox + a * xScale, y = oy - Math.asin(a) * yScale;
+    first ? ctx.moveTo(x, y) : ctx.lineTo(x, y); first = false;
+  }
+  ctx.stroke();
+
+  const a = 0.7;
+  const ax = ox + a * xScale, ay = oy - Math.asin(a) * yScale;
+  ctx.setLineDash([5,3]); ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.15)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(ax, oy); ctx.lineTo(ax, ay); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox, ay); ctx.lineTo(ax, ay); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(ax, ay, 6, 0, Math.PI * 2);
+  ctx.fillStyle = '#7F77DD'; ctx.fill();
+  ctx.fillStyle = textColor; ctx.font = '12px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('arcsin(0.7) ≈ 0.775', ax + 10, ay - 4);
+
+  ctx.fillStyle = textColor; ctx.font = '500 13px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('arcsin(a) — 일대일 함수!', W / 2, 22);
+}
+
+drawPanel1();
+</script>
