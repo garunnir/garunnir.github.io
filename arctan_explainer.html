@@ -1,0 +1,228 @@
+
+<style>
+  .wrap { padding: 1rem 0; font-family: var(--font-sans); }
+  .tabs { display: flex; gap: 8px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .tab { padding: 6px 16px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: transparent; cursor: pointer; font-size: 14px; color: var(--color-text-secondary); }
+  .tab.active { background: var(--color-background-secondary); color: var(--color-text-primary); font-weight: 500; border-color: var(--color-border-primary); }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .callout { background: var(--color-background-secondary); border-left: 3px solid #534AB7; border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0; padding: 12px 16px; margin: 0 0 1rem; font-size: 14px; line-height: 1.6; color: var(--color-text-primary); }
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; font-size: 13px; color: var(--color-text-secondary); }
+  .ld { width: 24px; height: 3px; border-radius: 2px; display:inline-block; vertical-align: middle; margin-right:4px; }
+</style>
+
+<div class="wrap">
+  <h2 class="sr-only">아크탄젠트(arctan) 시각적 설명 — tan 그래프, 주욧값 구간, arctan 완성 3단계</h2>
+
+  <div class="tabs">
+    <button class="tab active" onclick="go('p1',this)">1단계: tan의 특이점</button>
+    <button class="tab" onclick="go('p2',this)">2단계: 주욧값 구간</button>
+    <button class="tab" onclick="go('p3',this)">3단계: arctan 완성</button>
+  </div>
+
+  <div id="p1" class="panel active">
+    <div class="callout">
+      tan θ = sin θ / cos θ 이므로 cos θ = 0인 지점(±π/2, ±3π/2…)에서 <strong>값이 ±∞로 발산</strong>합니다.<br>
+      또한 sin처럼 주기함수라서 역함수를 그냥 정의하면 안 됩니다.
+    </div>
+    <canvas id="c1" height="300"></canvas>
+    <div class="legend">
+      <span><span class="ld" style="background:#534AB7;"></span>tan θ</span>
+      <span><span class="ld" style="background:#D85A30; border-top:2px dashed #D85A30; height:0;"></span>점근선 (cos θ = 0)</span>
+    </div>
+  </div>
+
+  <div id="p2" class="panel">
+    <div class="callout">
+      θ를 <strong>(-π/2, π/2)</strong> 구간으로 제한하면 tan은 순증가하며 일대일 대응이 됩니다.<br>
+      단, arcsin과 달리 양 끝점 ±π/2는 <strong>포함하지 않습니다</strong> — 그 지점에서 tan이 ±∞이기 때문입니다.
+    </div>
+    <canvas id="c2" height="300"></canvas>
+    <div class="legend">
+      <span><span class="ld" style="background:#ccc;"></span>제한 전 (사용 안 함)</span>
+      <span><span class="ld" style="background:#1D9E75;"></span>주욧값 구간 (-π/2, π/2)</span>
+    </div>
+  </div>
+
+  <div id="p3" class="panel">
+    <div class="callout">
+      <strong>arctan(a)</strong>: 어떤 실수 a를 넣어도 항상 (-π/2, π/2) 사이의 값 하나를 반환합니다.<br>
+      정의역: <strong>모든 실수 (-∞, +∞)</strong>, 치역: <strong>(-π/2, π/2)</strong> — 이게 arcsin과의 핵심 차이점!
+    </div>
+    <canvas id="c3" height="300"></canvas>
+    <div class="legend">
+      <span><span class="ld" style="background:#7F77DD;"></span>arctan(a)</span>
+      <span><span class="ld" style="background:#D85A30; border-top:2px dashed #D85A30; height:0;"></span>수평 점근선 ±π/2</span>
+    </div>
+    <p style="font-size:13px;color:var(--color-text-secondary);margin-top:10px;">
+      예: arctan(1) = π/4 ≈ 0.785 rad (45°) &nbsp;|&nbsp; arctan(100) ≈ 1.561 rad (거의 π/2) &nbsp;|&nbsp; arctan(∞) → π/2
+    </p>
+  </div>
+</div>
+
+<script>
+const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+const tc = isDark ? '#aaa' : '#555';
+const gc = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+const bg = isDark ? '#1a1a1a' : '#fafafa';
+
+function go(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  if (id==='p1') draw1(); if (id==='p2') draw2(); if (id==='p3') draw3();
+}
+
+function setup(id) {
+  const c = document.getElementById(id);
+  const dpr = devicePixelRatio || 1;
+  const W = c.parentElement.clientWidth || 640;
+  const H = parseInt(c.getAttribute('height'));
+  c.width = W*dpr; c.height = H*dpr;
+  c.style.width = W+'px'; c.style.height = H+'px';
+  const ctx = c.getContext('2d'); ctx.scale(dpr,dpr);
+  return {ctx,W,H};
+}
+
+function axes(ctx,W,H,ox,oy,xs,ys,xl,yl) {
+  ctx.strokeStyle=gc; ctx.lineWidth=0.5;
+  yl.forEach(([v,l])=>{
+    const y=oy-v*ys;
+    ctx.beginPath();ctx.moveTo(44,y);ctx.lineTo(W-16,y);ctx.stroke();
+    ctx.fillStyle=tc;ctx.font='11px sans-serif';ctx.textAlign='right';
+    ctx.fillText(l,42,y+4);
+  });
+  xl.forEach(([v,l])=>{
+    const x=ox+v*xs;
+    ctx.beginPath();ctx.moveTo(x,16);ctx.lineTo(x,H-16);ctx.stroke();
+    ctx.fillStyle=tc;ctx.font='11px sans-serif';ctx.textAlign='center';
+    ctx.fillText(l,x,H-4);
+  });
+  ctx.strokeStyle=isDark?'rgba(255,255,255,0.25)':'rgba(0,0,0,0.2)';
+  ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(44,oy);ctx.lineTo(W-16,oy);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(ox,16);ctx.lineTo(ox,H-16);ctx.stroke();
+}
+
+function draw1() {
+  const {ctx,W,H}=setup('c1');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  const ox=W/2, oy=H/2, xs=(W-60)/(3*Math.PI), ys=(H-40)/8;
+  axes(ctx,W,H,ox,oy,xs,ys,
+    [[-Math.PI,'-π'],[-Math.PI/2,'-π/2'],[0,'0'],[Math.PI/2,'π/2'],[Math.PI,'π']],
+    [[-3,'-3'],[-1,'-1'],[1,'1'],[3,'3']]);
+
+  const asym = [-Math.PI/2*3, -Math.PI/2, Math.PI/2, Math.PI/2*3];
+  ctx.setLineDash([5,4]); ctx.strokeStyle='#D85A30'; ctx.lineWidth=1.2;
+  asym.forEach(v=>{
+    const x=ox+v*xs;
+    if(x>44&&x<W-16){ctx.beginPath();ctx.moveTo(x,16);ctx.lineTo(x,H-16);ctx.stroke();}
+  });
+  ctx.setLineDash([]);
+
+  const segments=[[-1.4,-0.55],[-0.45,0.45],[0.55,1.4]];
+  segments.forEach(([a,b])=>{
+    ctx.beginPath(); ctx.strokeStyle='#534AB7'; ctx.lineWidth=2.5;
+    let first=true;
+    for(let i=0;i<=200;i++){
+      const t=a*Math.PI+(b-a)*Math.PI*i/200;
+      const v=Math.tan(t);
+      if(Math.abs(v)>5) {first=true; continue;}
+      const x=ox+t*xs, y=oy-v*ys;
+      first?ctx.moveTo(x,y):ctx.lineTo(x,y); first=false;
+    }
+    ctx.stroke();
+  });
+  ctx.fillStyle=tc;ctx.font='500 12px sans-serif';ctx.textAlign='center';
+  ctx.fillText('tan θ — 주기마다 -∞에서 +∞로 발산',W/2,18);
+}
+
+function draw2() {
+  const {ctx,W,H}=setup('c2');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  const ox=W/2, oy=H/2, xs=(W-60)/(3*Math.PI), ys=(H-40)/8;
+  axes(ctx,W,H,ox,oy,xs,ys,
+    [[-Math.PI,'-π'],[-Math.PI/2,'-π/2'],[0,'0'],[Math.PI/2,'π/2'],[Math.PI,'π']],
+    [[-3,'-3'],[-1,'-1'],[1,'1'],[3,'3']]);
+
+  const segments=[[-1.4,-0.55],[-0.45,0.45],[0.55,1.4]];
+  ctx.globalAlpha=0.18;
+  segments.forEach(([a,b])=>{
+    ctx.beginPath(); ctx.strokeStyle=isDark?'#fff':'#000'; ctx.lineWidth=2;
+    let first=true;
+    for(let i=0;i<=200;i++){
+      const t=a*Math.PI+(b-a)*Math.PI*i/200;
+      const v=Math.tan(t);
+      if(Math.abs(v)>5){first=true;continue;}
+      const x=ox+t*xs,y=oy-v*ys;
+      first?ctx.moveTo(x,y):ctx.lineTo(x,y);first=false;
+    }
+    ctx.stroke();
+  });
+  ctx.globalAlpha=1;
+
+  const pvX1=ox+(-Math.PI/2)*xs, pvX2=ox+(Math.PI/2)*xs;
+  ctx.fillStyle=isDark?'rgba(29,158,117,0.12)':'rgba(29,158,117,0.09)';
+  ctx.fillRect(pvX1,16,pvX2-pvX1,H-32);
+
+  ctx.beginPath();ctx.strokeStyle='#1D9E75';ctx.lineWidth=3;
+  let first=true;
+  for(let i=1;i<=298;i++){
+    const t=-Math.PI/2+Math.PI*i/300;
+    const v=Math.tan(t);
+    if(Math.abs(v)>5){first=true;continue;}
+    const x=ox+t*xs,y=oy-v*ys;
+    first?ctx.moveTo(x,y):ctx.lineTo(x,y);first=false;
+  }
+  ctx.stroke();
+
+  ctx.setLineDash([4,3]);ctx.strokeStyle='#D85A30';ctx.lineWidth=1.2;
+  [pvX1,pvX2].forEach(x=>{ctx.beginPath();ctx.moveTo(x,16);ctx.lineTo(x,H-16);ctx.stroke();});
+  ctx.setLineDash([]);
+
+  ctx.fillStyle=isDark?'rgba(29,158,117,0.9)':'#0F6E56';
+  ctx.font='500 13px sans-serif';ctx.textAlign='center';
+  ctx.fillText('주욧값 구간 (-π/2, π/2)',(pvX1+pvX2)/2,30);
+}
+
+function draw3() {
+  const {ctx,W,H}=setup('c3');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  const ox=W/2, oy=H/2, xs=(W-60)/12, ys=(H-40)/(Math.PI+0.4);
+  axes(ctx,W,H,ox,oy,xs,ys,
+    [[-5,'-5'],[-2,'-2'],[0,'0'],[2,'2'],[5,'5']],
+    [[-Math.PI/2,'-π/2'],[0,'0'],[Math.PI/2,'π/2']]);
+
+  ctx.setLineDash([5,4]);ctx.strokeStyle='#D85A30';ctx.lineWidth=1.2;
+  [Math.PI/2,-Math.PI/2].forEach(v=>{
+    const y=oy-v*ys;
+    ctx.beginPath();ctx.moveTo(44,y);ctx.lineTo(W-16,y);ctx.stroke();
+  });
+  ctx.setLineDash([]);
+
+  ctx.beginPath();ctx.strokeStyle='#7F77DD';ctx.lineWidth=3;
+  let first=true;
+  for(let i=0;i<=400;i++){
+    const a=-6+12*i/400;
+    const x=ox+a*xs, y=oy-Math.atan(a)*ys;
+    first?ctx.moveTo(x,y):ctx.lineTo(x,y);first=false;
+  }
+  ctx.stroke();
+
+  const a=2;
+  const ax=ox+a*xs, ay=oy-Math.atan(a)*ys;
+  ctx.setLineDash([4,3]);ctx.strokeStyle=isDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.15)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(ax,oy);ctx.lineTo(ax,ay);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(ox,ay);ctx.lineTo(ax,ay);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath();ctx.arc(ax,ay,6,0,Math.PI*2);ctx.fillStyle='#7F77DD';ctx.fill();
+  ctx.fillStyle=tc;ctx.font='12px sans-serif';ctx.textAlign='left';
+  ctx.fillText('arctan(2) ≈ 1.107',ax+10,ay-4);
+
+  ctx.fillStyle=tc;ctx.font='500 13px sans-serif';ctx.textAlign='center';
+  ctx.fillText('arctan(a) — 모든 실수 입력 가능, 출력은 항상 (-π/2, π/2)',W/2,18);
+}
+
+draw1();
+</script>
